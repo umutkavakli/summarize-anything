@@ -1,6 +1,6 @@
 import gradio as gr
-
-from youtube_summarizer import get_summarization
+import youtube_summarizer
+import pdf_summarizer 
 
 models = ["Llama 2"]
 sources = ["Youtube Video", "PDF", "Website"]
@@ -12,28 +12,37 @@ h1 {
 }
 """
 
+def update_source(source):
+    youtube_visibility = (source == "Youtube Video")
+    pdf_visibility = (source == "PDF")
+    return gr.Textbox(visible=youtube_visibility), gr.UploadButton(visible=pdf_visibility)
+
+def out(youtube, pdf, source):
+    if source == "Youtube Video":
+        return youtube_summarizer.get_summarization(youtube)
+    else:
+        return pdf_summarizer.get_summarization(pdf)
+
 with gr.Blocks(css=css) as demo:
     gr.Markdown(
         """
         # Summarize Anything
         If you are tired to watch a video or read blog/pdf to have a sense in main points of source, 
         this app will help you! You can summarize youtube videos, webpage contents and PDFs with only one click!
-        """)
-
+        """
+    )
 
     with gr.Row():
         with gr.Column():
             model = gr.Dropdown(choices=models, label="Model", value=models[0], interactive=True)
             task = gr.Dropdown(choices=sources, label="Source", value=sources[0], interactive=True)
-
         with gr.Column():
-            url = gr.Textbox(label="Youtube URL")
+            youtube = gr.Textbox(label="Youtube URL", visible=True)
+            pdf = gr.UploadButton("Click to Upload a PDF File", file_types=["file"], file_count="single", visible=False)
+            task.change(update_source, inputs=[task], outputs=[youtube, pdf])
             output = gr.Textbox(label="Summarization", lines=10)
-            summarize_btn = gr.Button("Summarize")
+            summarize_button = gr.Button("Summarize")
+            summarize_button.click(fn=out, inputs=[youtube, pdf, task], outputs=[output])
 
-    @summarize_btn.click(inputs=url, outputs=output)
-    def out(url):
-        return get_summarization(url)
-    
+# Launch the Gradio interface
 demo.launch()
-
