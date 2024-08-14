@@ -34,8 +34,6 @@ with gr.Blocks(css=css) as demo:
     gr.Markdown(
         """
         # Summarize Anything
-        If you are tired to watch a video or read blog/pdf to have a sense in main points of source, 
-        this app will help you! You can summarize youtube videos, webpage contents and PDFs with only one click!
         """
     )
 
