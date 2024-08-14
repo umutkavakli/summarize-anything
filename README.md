@@ -8,3 +8,20 @@ Download <b>[ollama](https://ollama.com/download)</b> and install one of the LLM
 ```
 ollama pull <MODEL>
 ```
+
+Clone this repository:
+```
+git clone https://github.com/umutkavakli/summarize-anything.git
+```
+Install requirements:
+```
+cd summarize-anything
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Run the script: 
+```
+python app.py
+```
