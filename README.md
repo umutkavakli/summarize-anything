@@ -25,3 +25,5 @@ Run the script:
 ```
 python app.py
 ```
+
+![Example image](assets/image.png)
