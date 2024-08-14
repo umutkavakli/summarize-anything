@@ -2,8 +2,7 @@ import re
 from langchain.prompts import PromptTemplate
 from langchain_community.llms.ollama import Ollama
 from langchain_text_splitters import CharacterTextSplitter
-from langchain.chains.combine_documents.stuff import StuffDocumentsChain
-from langchain.chains import LLMChain, MapReduceDocumentsChain, ReduceDocumentsChain
+from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_community.document_loaders import YoutubeLoader, PyPDFLoader, WebBaseLoader
 
 
@@ -26,14 +25,15 @@ def load_document(source, source_type):
         if source_type == "pdf":
             loader = PyPDFLoader(source)
         elif source_type == "youtube":
-            loader = YoutubeLoader(
+            loader = YoutubeLoader.from_youtube_url(
                 source,
                 language=["en", "en-US"],
                 add_video_info=False
             )
         elif source_type == "webpage":
             loader = WebBaseLoader(source)
-        return loader.load()
+        document = loader.load()
+        return document
     except Exception as exp:
         return f"Error occured: {exp}"
     
@@ -45,20 +45,11 @@ def create_chunks(document, chunk_size=1500):
     chunks = text_splitter.split_documents(document)
     return chunks
 
-def get_prompts():
-    map_template = """The following is a set of documents
-    {docs}
-    Based on this list of docs, please identify the main themes and pay attention to the following when creating this summary:
-    1. Capture the essence of the document by focusing on the main ideas and key details. 
-    2. Avoid including unnecessary, meaningless and long explanations.
-    3. Make the summary easy to read and understand by presenting it in a well-structured paragraph.
-    Helpful Answer:"""
+def get_prompt():
 
-    map_prompt = PromptTemplate.from_template(map_template)
-
-    reduce_template = """The following is set of summaries:
-    {docs}
-    Take the summaries given and directly analyse them to create a final summary. Pay attention to the following when creating this summary:
+    template = """The following is a document:
+    {context}
+    Take this document given and directly analyse them to create a final summary. Pay attention to the following when creating this summary:
 
     1. Your beginning sentence will be "Here is the summary of the document:" 
     2. Start with a small general statement and then go item by item to declare main key points. 
@@ -67,47 +58,21 @@ def get_prompts():
     5. Finish summarization with "Thank you." to indicate the completion of the task.
     Helpful Answer:"""
 
-    reduce_prompt = PromptTemplate.from_template(reduce_template)
+    prompt = PromptTemplate.from_template(template)
 
-    return map_prompt, reduce_prompt
+    return prompt
 
 def get_chain(model):
     llm = Ollama(model=model)
-    map_prompt, reduce_prompt = get_prompts()
-    map_chain = LLMChain(llm=llm, prompt=map_prompt)
-    reduce_chain = LLMChain(llm=llm, prompt=reduce_prompt)
+    prompt = get_prompt()
+    chain = create_stuff_documents_chain(llm, prompt)
 
-    combine_documents_chain = StuffDocumentsChain(
-       llm_chain=reduce_chain, 
-       document_variable_name="docs", 
-    )
-
-    reduce_documents_chain = ReduceDocumentsChain(
-        # Final chain that is called
-        combine_documents_chain=combine_documents_chain,
-        # If documents exceed context for `StuffDocumentsChain`
-        collapse_documents_chain=combine_documents_chain,
-        # The maximum number of tokens to group documents into.
-        token_max=4000,
-    )
-
-    map_reduce_chain = MapReduceDocumentsChain(
-        # Map chain
-        llm_chain=map_chain,
-        # Reduce chain
-        reduce_documents_chain=reduce_documents_chain,
-        # The variable name in the llm_chain to put the documents in
-        document_variable_name="docs",
-        # Return the results of the map steps in the output
-        return_intermediate_steps=False,
-    )
-
-    return map_reduce_chain
+    return chain
 
 def get_summarization(source, source_type):
-    transcript = load_document(source, source_type)
-    chunks = create_chunks(transcript)
+    document = load_document(source, source_type)
+    chunks = create_chunks(document)
     chain = get_chain("llama3:instruct")
-    summary = chain.invoke(chunks)
+    summary = chain.invoke({'context': chunks})
 
-    return summary["output_text"]
+    return summary

@@ -17,13 +17,13 @@ h1 {
 """
 
 def update_source(source):
-    youtube_visibility = (source == "Youtube Video")
+    youtube_visibility = (source == "Youtube Video URL")
     pdf_visibility = (source == "PDF")
     web_visibility = (source == "Webpage URL")
     return gr.Textbox(visible=youtube_visibility), gr.UploadButton(visible=pdf_visibility), gr.Textbox(visible=web_visibility)
 
 def result(youtube, pdf, web, source_type):
-    if source_type == "Youtube Video":
+    if source_type == "Youtube Video URL":
         return get_summarization(youtube, sources[source_type])
     elif source_type == "PDF":
         return get_summarization(pdf, sources[source_type])
@@ -44,7 +44,7 @@ with gr.Blocks(css=css) as demo:
             model = gr.Dropdown(choices=models, label="Model", value=models[0], interactive=True)
             task = gr.Dropdown(choices=list(sources.keys()), label="Source", value=list(sources.keys())[0], interactive=True)
         with gr.Column():
-            youtube_box = gr.Textbox(label="Youtube URL", visible=True)
+            youtube_box = gr.Textbox(label="Youtube Video URL", visible=True)
             pdf_box = gr.UploadButton("Click to Upload a PDF File", file_types=["file"], file_count="single", visible=False)
             webpage_box = gr.Textbox(label="Webpage URL", visible=False)
             task.change(update_source, inputs=[task], outputs=[youtube_box, pdf_box, webpage_box])
